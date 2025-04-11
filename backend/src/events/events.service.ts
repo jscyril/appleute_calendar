@@ -29,6 +29,16 @@ export class EventsService {
     };
     return this.events[eventIndex];
   }
+  replace(id: string, createEventDto: CreateEventDto): Event {
+    const eventIndex = this.events.findIndex((event) => event.id === id);
+    if (eventIndex === -1) return null;
+    this.events[eventIndex] = {
+      id,
+      ...createEventDto,
+      isSnoozed: false,
+    };
+    return this.events[eventIndex];
+  }
   remove(id: string): boolean {
     const eventIndex = this.events.findIndex((event) => event.id === id);
     if (eventIndex === -1) return false;
