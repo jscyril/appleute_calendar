@@ -20,6 +20,16 @@ export interface EventModalProps {
     images?: string[];
     videos?: string[];
   }) => void;
+  editMode?: boolean;
+  eventToEdit?: {
+    title: string;
+    description: string;
+    startDate: Date;
+    endDate: Date;
+    notificationTime: Date;
+    images?: string[];
+    videos?: string[];
+  };
 }
 
 export default function EventModal({
@@ -28,20 +38,36 @@ export default function EventModal({
   startDate,
   endDate,
   onSubmit,
+  editMode = false,
+  eventToEdit,
 }: EventModalProps) {
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
+  const [title, setTitle] = useState(
+    editMode && eventToEdit ? eventToEdit.title : ""
+  );
+  const [description, setDescription] = useState(
+    editMode && eventToEdit ? eventToEdit.description : ""
+  );
   const [eventStartDate, setEventStartDate] = useState(
-    toLocalDateTimeString(startDate)
+    editMode && eventToEdit
+      ? toLocalDateTimeString(eventToEdit.startDate)
+      : toLocalDateTimeString(startDate)
   );
   const [eventEndDate, setEventEndDate] = useState(
-    toLocalDateTimeString(endDate)
+    editMode && eventToEdit
+      ? toLocalDateTimeString(eventToEdit.endDate)
+      : toLocalDateTimeString(endDate)
   );
   const [notificationTime, setNotificationTime] = useState(
-    toLocalDateTimeString(startDate)
+    editMode && eventToEdit
+      ? toLocalDateTimeString(eventToEdit.notificationTime)
+      : toLocalDateTimeString(startDate)
   );
-  const [images, setImages] = useState<string[]>([]);
-  const [videos, setVideos] = useState<string[]>([]);
+  const [images, setImages] = useState<string[]>(
+    editMode && eventToEdit?.images ? eventToEdit.images : []
+  );
+  const [videos, setVideos] = useState<string[]>(
+    editMode && eventToEdit?.videos ? eventToEdit.videos : []
+  );
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -110,7 +136,7 @@ export default function EventModal({
         onClick={(e) => e.stopPropagation()}
       >
         <h2 className="text-2xl font-semibold mb-5 text-center">
-          Add New Event
+          {editMode ? "Edit Event" : "Add New Event"}
         </h2>
         <form
           onSubmit={handleSubmit}
@@ -354,7 +380,7 @@ export default function EventModal({
                 focus:ring-blue-500
               "
             >
-              Create Event
+              {editMode ? "Update Event" : "Create Event"}
             </button>
           </div>
         </form>

@@ -1,80 +1,119 @@
 "use client";
-import { useState, useEffect } from "react";
+import { FC, useState, useEffect } from "react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
-import { DateSelectArg, EventClickArg } from "@fullcalendar/core";
+import { EventInput, DateSelectArg, EventClickArg } from "@fullcalendar/core";
+import { Event, eventService } from "@/services/eventService";
 import EventModal from "./EventModal";
-import { eventService, Event } from "@/services/eventService";
+import EventDetailsModal from "./EventDetailsModal";
 
-export default function Calendar() {
-  const [events, setEvents] = useState<Event[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+const Calendar: FC = () => {
   const [showModal, setShowModal] = useState(false);
-  const [selectedDates, setSelectedDates] = useState<{
-    start: Date;
-    end: Date;
-  } | null>(null);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [events, setEvents] = useState<Event[]>([]);
+  const [error, setError] = useState<string>("");
+  const [startDate, setStartDate] = useState<Date | null>(null);
+  const [endDate, setEndDate] = useState<Date | null>(null);
+  const [isEditMode, setIsEditMode] = useState(false);
 
   useEffect(() => {
-    const fetchEvents = async () => {
-      try {
-        const data = await eventService.getAllEvents();
-        setEvents(data);
-      } catch (err: any) {
-        setError(err?.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchEvents();
   }, []);
 
-  const handleSubmit = async (eventData: {
-    title: string;
-    description: string;
-    startDate: Date;
-    endDate: Date;
-    notificationTime: Date;
-    images?: string[];
-    videos?: string[];
-  }) => {
+  const fetchEvents = async () => {
     try {
-      const newEvent = await eventService.createEvent(eventData);
-      setEvents((prevEvents) => [...prevEvents, newEvent]);
-      setShowModal(false);
-    } catch (error: any) {
-      setError(error?.message);
+      const fetchedEvents = await eventService.getAllEvents();
+      setEvents(fetchedEvents);
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("An error occurred while fetching events");
+      }
     }
   };
 
   const handleDateSelect = (selectInfo: DateSelectArg) => {
-    setSelectedDates({ start: selectInfo.start, end: selectInfo.end });
     setShowModal(true);
+    setStartDate(selectInfo.start);
+    setEndDate(selectInfo.end);
   };
 
   const handleEventClick = (clickInfo: EventClickArg) => {
-    console.log("Event clicked:", clickInfo.event);
+    const eventId = clickInfo.event.id;
+    const event = events.find((e) => e.id === eventId);
+    if (event) {
+      setSelectedEvent(event);
+      setShowDetailsModal(true);
+    }
   };
 
-  if (loading)
-    return (
-      <div className="flex items-center justify-center h-screen">
-        Loading...
-      </div>
-    );
-  if (error)
-    return (
-      <div className="flex items-center justify-center h-screen">
-        Error: {error}
-      </div>
-    );
+  const handleSubmit = async (eventData: Omit<Event, "id" | "isSnoozed">) => {
+    try {
+      if (isEditMode && selectedEvent) {
+        await eventService.updateEvent(selectedEvent.id, eventData);
+      } else {
+        await eventService.createEvent(eventData);
+      }
+      await fetchEvents();
+      setShowModal(false);
+      setIsEditMode(false);
+      setSelectedEvent(null);
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError(
+          `An error occurred while ${
+            isEditMode ? "updating" : "creating"
+          } the event`
+        );
+      }
+    }
+  };
+
+  const handleEditEvent = (event: Event) => {
+    setSelectedEvent(event);
+    setIsEditMode(true);
+    setShowDetailsModal(false);
+    setShowModal(true);
+  };
+
+  const handleDeleteEvent = async (eventId: string) => {
+    try {
+      await eventService.deleteEvent(eventId);
+      await fetchEvents();
+      setShowDetailsModal(false);
+      setSelectedEvent(null);
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("An error occurred while deleting the event");
+      }
+    }
+  };
+
+  const calendarEvents: EventInput[] = events.map((event) => ({
+    id: event.id,
+    title: event.title,
+    start: event.startDate,
+    end: event.endDate,
+    extendedProps: {
+      description: event.description,
+      notificationTime: event.notificationTime,
+      images: event.images,
+      videos: event.videos,
+      isSnoozed: event.isSnoozed,
+    },
+  }));
 
   return (
-    <div className="p-4 sm:p-6 md:p-8">
+    <div className="h-screen p-4">
+      {error && <div className="text-red-500 mb-4">{error}</div>}
       <FullCalendar
         plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
         headerToolbar={{
@@ -86,28 +125,41 @@ export default function Calendar() {
         editable={true}
         selectable={true}
         selectMirror={true}
-        dayMaxEventRows={true}
-        weekends={true}
+        dayMaxEvents={true}
+        events={calendarEvents}
         select={handleDateSelect}
         eventClick={handleEventClick}
-        events={events.map((event) => ({
-          id: event.id,
-          title: event.title,
-          start: new Date(event.startDate),
-          end: new Date(event.endDate),
-          extendedProps: { description: event.description },
-        }))}
-        height="auto"
+        height="100%"
       />
-      {showModal && selectedDates && (
+      {showModal && (
         <EventModal
           isOpen={showModal}
-          onClose={() => setShowModal(false)}
-          startDate={selectedDates.start}
-          endDate={selectedDates.end}
+          onClose={() => {
+            setShowModal(false);
+            setIsEditMode(false);
+            setSelectedEvent(null);
+          }}
           onSubmit={handleSubmit}
+          startDate={startDate || new Date()}
+          endDate={endDate || new Date()}
+          editMode={isEditMode}
+          eventToEdit={selectedEvent || undefined}
+        />
+      )}
+      {showDetailsModal && selectedEvent && (
+        <EventDetailsModal
+          isOpen={showDetailsModal}
+          event={selectedEvent}
+          onEdit={handleEditEvent}
+          onDelete={handleDeleteEvent}
+          onClose={() => {
+            setShowDetailsModal(false);
+            setSelectedEvent(null);
+          }}
         />
       )}
     </div>
   );
-}
+};
+
+export default Calendar;

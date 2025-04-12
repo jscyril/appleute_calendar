@@ -3,7 +3,7 @@ import { API_CONFIG } from "../config/api";
 export interface Event {
   id: string;
   title: string;
-  description?: string;
+  description: string;
   startDate: Date;
   endDate: Date;
   notificationTime: Date;
