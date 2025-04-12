@@ -1,4 +1,10 @@
-import { IsString, IsDate, IsArray, IsOptional } from 'class-validator';
+import {
+  IsString,
+  IsDate,
+  IsArray,
+  IsOptional,
+  IsBoolean,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class CreateEventDto {
@@ -27,4 +33,8 @@ export class CreateEventDto {
   @IsDate()
   @Type(() => Date)
   notificationTime: Date;
+
+  @IsBoolean()
+  @IsOptional()
+  isSnoozed?: boolean = false;
 }

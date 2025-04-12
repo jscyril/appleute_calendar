@@ -5,6 +5,7 @@ import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import { EventInput, DateSelectArg, EventClickArg } from "@fullcalendar/core";
+import type { DateClickArg } from "@fullcalendar/interaction";
 import { Event, eventService } from "@/services/eventService";
 import EventModal from "./EventModal";
 import EventDetailsModal from "./EventDetailsModal";
@@ -49,6 +50,40 @@ const Calendar: FC = () => {
       setSelectedEvent(event);
       setShowDetailsModal(true);
     }
+  };
+
+  const handleDateClick = (arg: DateClickArg) => {
+    const clickedDate = new Date(arg.date);
+    const now = new Date();
+
+    // If clicked date is today, use exact current time
+    if (clickedDate.toDateString() === now.toDateString()) {
+      // Set hours, minutes, seconds from current time
+      clickedDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds());
+    } else {
+      // If it's a future date, default to 9 AM
+      clickedDate.setHours(9, 0, 0, 0);
+    }
+
+    // Set end time to 1 hour after start time
+    const endTime = new Date(clickedDate.getTime() + 60 * 60 * 1000);
+
+    // Update the start and end date states
+    setStartDate(clickedDate);
+    setEndDate(endTime);
+
+    setSelectedEvent({
+      id: "",
+      title: "",
+      description: "",
+      startDate: clickedDate,
+      endDate: endTime,
+      notificationTime: new Date(clickedDate.getTime() - 15 * 60 * 1000), // 15 minutes before
+      images: [],
+      videos: [],
+      isSnoozed: false,
+    });
+    setShowModal(true);
   };
 
   const handleSubmit = async (eventData: Omit<Event, "id" | "isSnoozed">) => {
@@ -129,6 +164,7 @@ const Calendar: FC = () => {
         events={calendarEvents}
         select={handleDateSelect}
         eventClick={handleEventClick}
+        dateClick={handleDateClick}
         height="100%"
       />
       {showModal && (

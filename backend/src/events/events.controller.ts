@@ -19,6 +19,7 @@ import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 import { FileUploadService } from '../services/file-upload.service';
 import { multerConfig } from '../config/multer.config';
+import { NotificationService } from '../notifications/notification.service';
 
 interface MulterFile {
   buffer: Buffer;
@@ -31,6 +32,7 @@ export class EventsController {
   constructor(
     private readonly eventsService: EventsService,
     private readonly fileUploadService: FileUploadService,
+    private readonly notificationService: NotificationService,
   ) {}
 
   @Post('upload')
@@ -107,5 +109,13 @@ export class EventsController {
       );
     }
     return this.eventsService.remove(id);
+  }
+
+  @Post(':id/snooze')
+  async snoozeEvent(
+    @Param('id') id: string,
+    @Body() body: { minutes: number },
+  ) {
+    return this.notificationService.snoozeEvent(id, body.minutes);
   }
 }

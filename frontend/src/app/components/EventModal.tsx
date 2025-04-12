@@ -1,12 +1,36 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { eventService } from "@/services/eventService";
 import { API_CONFIG } from "@/config/api";
 
 const toLocalDateTimeString = (date: Date | string): string => {
-  const dateObject = date instanceof Date ? date : new Date(date);
-  const offset = dateObject.getTimezoneOffset() * 60000;
-  return new Date(dateObject.getTime() - offset).toISOString().slice(0, 16);
+  try {
+    const dateObject = date instanceof Date ? date : new Date(date);
+
+    // Check if the date is valid
+    if (isNaN(dateObject.getTime())) {
+      console.error("Invalid date:", date);
+      return "";
+    }
+
+    // Format the date to YYYY-MM-DDTHH:mm format for the datetime-local input
+    const year = dateObject.getFullYear();
+    const month = String(dateObject.getMonth() + 1).padStart(2, "0");
+    const day = String(dateObject.getDate()).padStart(2, "0");
+    const hours = String(dateObject.getHours()).padStart(2, "0");
+    const minutes = String(dateObject.getMinutes()).padStart(2, "0");
+
+    console.log("Converting date:", {
+      original: date,
+      formatted: `${year}-${month}-${day}T${hours}:${minutes}`,
+      components: { year, month, day, hours, minutes },
+    });
+
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  } catch (error) {
+    console.error("Error formatting date:", error);
+    return "";
+  }
 };
 
 const getFullUrl = (path: string) => {
@@ -55,21 +79,29 @@ export default function EventModal({
   const [description, setDescription] = useState(
     editMode && eventToEdit ? eventToEdit.description : ""
   );
-  const [eventStartDate, setEventStartDate] = useState(
-    editMode && eventToEdit
-      ? toLocalDateTimeString(eventToEdit.startDate)
-      : toLocalDateTimeString(startDate)
-  );
-  const [eventEndDate, setEventEndDate] = useState(
-    editMode && eventToEdit
-      ? toLocalDateTimeString(eventToEdit.endDate)
-      : toLocalDateTimeString(endDate)
-  );
-  const [notificationTime, setNotificationTime] = useState(
-    editMode && eventToEdit
-      ? toLocalDateTimeString(eventToEdit.notificationTime)
-      : toLocalDateTimeString(startDate)
-  );
+
+  // Initialize dates with useEffect to ensure they update when props change
+  const [eventStartDate, setEventStartDate] = useState("");
+  const [eventEndDate, setEventEndDate] = useState("");
+  const [notificationTime, setNotificationTime] = useState("");
+
+  const [notificationPreset, setNotificationPreset] = useState("15min");
+
+  useEffect(() => {
+    if (editMode && eventToEdit) {
+      setEventStartDate(toLocalDateTimeString(eventToEdit.startDate));
+      setEventEndDate(toLocalDateTimeString(eventToEdit.endDate));
+      setNotificationTime(toLocalDateTimeString(eventToEdit.notificationTime));
+    } else {
+      setEventStartDate(toLocalDateTimeString(startDate));
+      setEventEndDate(toLocalDateTimeString(endDate));
+      // Default to 15 minutes before
+      const notifTime = new Date(startDate);
+      notifTime.setMinutes(notifTime.getMinutes() - 15);
+      setNotificationTime(toLocalDateTimeString(notifTime));
+    }
+  }, [editMode, eventToEdit, startDate, endDate]);
+
   const [images, setImages] = useState<string[]>(
     editMode && eventToEdit?.images ? eventToEdit.images : []
   );
@@ -101,6 +133,42 @@ export default function EventModal({
         alert("Failed to upload videos. Please try again.");
       }
     }
+  };
+
+  const handleDeleteImage = (indexToDelete: number) => {
+    setImages((prev) => prev.filter((_, index) => index !== indexToDelete));
+  };
+
+  const handleDeleteVideo = (indexToDelete: number) => {
+    setVideos((prev) => prev.filter((_, index) => index !== indexToDelete));
+  };
+
+  const handleNotificationPresetChange = (preset: string) => {
+    setNotificationPreset(preset);
+    const end = new Date(eventEndDate);
+    let notifTime = new Date(end);
+
+    switch (preset) {
+      case "atEnd":
+        notifTime = new Date(end);
+        break;
+      case "5min":
+        notifTime.setMinutes(end.getMinutes() - 5);
+        break;
+      case "15min":
+        notifTime.setMinutes(end.getMinutes() - 15);
+        break;
+      case "30min":
+        notifTime.setMinutes(end.getMinutes() - 30);
+        break;
+      case "1hour":
+        notifTime.setHours(end.getHours() - 1);
+        break;
+      case "custom":
+        // Don't change the time for custom option
+        return;
+    }
+    setNotificationTime(toLocalDateTimeString(notifTime));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -245,28 +313,88 @@ export default function EventModal({
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Notification Time
+              Notify me
             </label>
-            <input
-              type="datetime-local"
-              value={notificationTime}
-              onChange={(e) => setNotificationTime(e.target.value)}
-              className="
-                w-full
-                px-3 
-                py-2 
-                border-2 
-                border-gray-600 
-                rounded-md 
-                focus:outline-none 
-                focus:border-blue-500 
-                focus:ring-2 
-                focus:ring-blue-500
-                bg-white
-                text-gray-900
-              "
-              required
-            />
+            <div className="space-y-3">
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleNotificationPresetChange("atEnd")}
+                  className={`px-3 py-1 rounded-md text-sm ${
+                    notificationPreset === "atEnd"
+                      ? "bg-blue-500 text-white"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  }`}
+                >
+                  When event ends
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleNotificationPresetChange("5min")}
+                  className={`px-3 py-1 rounded-md text-sm ${
+                    notificationPreset === "5min"
+                      ? "bg-blue-500 text-white"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  }`}
+                >
+                  5 min before end
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleNotificationPresetChange("15min")}
+                  className={`px-3 py-1 rounded-md text-sm ${
+                    notificationPreset === "15min"
+                      ? "bg-blue-500 text-white"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  }`}
+                >
+                  15 min before end
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleNotificationPresetChange("30min")}
+                  className={`px-3 py-1 rounded-md text-sm ${
+                    notificationPreset === "30min"
+                      ? "bg-blue-500 text-white"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  }`}
+                >
+                  30 min before end
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleNotificationPresetChange("1hour")}
+                  className={`px-3 py-1 rounded-md text-sm ${
+                    notificationPreset === "1hour"
+                      ? "bg-blue-500 text-white"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  }`}
+                >
+                  1 hour before end
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleNotificationPresetChange("custom")}
+                  className={`px-3 py-1 rounded-md text-sm ${
+                    notificationPreset === "custom"
+                      ? "bg-blue-500 text-white"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  }`}
+                >
+                  Custom time
+                </button>
+              </div>
+              <input
+                type="datetime-local"
+                value={notificationTime}
+                onChange={(e) => {
+                  setNotificationTime(e.target.value);
+                  setNotificationPreset("custom");
+                }}
+                className="w-full px-3 py-2 border-2 border-gray-600 rounded-md focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+                required
+              />
+            </div>
           </div>
 
           <div>
@@ -296,12 +424,43 @@ export default function EventModal({
             {images.length > 0 && (
               <div className="mt-3 grid grid-cols-3 gap-2">
                 {images.map((img, index) => (
-                  <img
-                    key={index}
-                    src={getFullUrl(img)}
-                    alt={`Upload ${index + 1}`}
-                    className="w-full h-20 object-cover rounded-md hover:opacity-90"
-                  />
+                  <div key={index} className="relative group">
+                    <img
+                      src={getFullUrl(img)}
+                      alt={`Upload ${index + 1}`}
+                      className="w-full h-20 object-cover rounded-md hover:opacity-90"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteImage(index)}
+                      className="
+                        absolute top-1 right-1
+                        bg-red-500 text-white
+                        rounded-full p-1
+                        opacity-0 group-hover:opacity-100
+                        transition-opacity
+                        hover:bg-red-600
+                        focus:outline-none
+                        focus:ring-2
+                        focus:ring-red-500
+                      "
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-4 w-4"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M6 18L18 6M6 6l12 12"
+                        />
+                      </svg>
+                    </button>
+                  </div>
                 ))}
               </div>
             )}
@@ -334,12 +493,43 @@ export default function EventModal({
             {videos.length > 0 && (
               <div className="mt-3 grid grid-cols-2 gap-2">
                 {videos.map((video, index) => (
-                  <video
-                    key={index}
-                    src={getFullUrl(video)}
-                    controls
-                    className="w-full rounded-md hover:opacity-90"
-                  />
+                  <div key={index} className="relative group">
+                    <video
+                      src={getFullUrl(video)}
+                      controls
+                      className="w-full rounded-md hover:opacity-90"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteVideo(index)}
+                      className="
+                        absolute top-1 right-1
+                        bg-red-500 text-white
+                        rounded-full p-1
+                        opacity-0 group-hover:opacity-100
+                        transition-opacity
+                        hover:bg-red-600
+                        focus:outline-none
+                        focus:ring-2
+                        focus:ring-red-500
+                      "
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-4 w-4"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M6 18L18 6M6 6l12 12"
+                        />
+                      </svg>
+                    </button>
+                  </div>
                 ))}
               </div>
             )}

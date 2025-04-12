@@ -1,6 +1,8 @@
 "use client";
 import { Event } from "@/services/eventService";
 import { API_CONFIG } from "@/config/api";
+import { notificationService } from "@/services/notificationService";
+import { useState } from "react";
 
 const getFullUrl = (path: string) => {
   if (path.startsWith("http")) return path;
@@ -22,6 +24,22 @@ export default function EventDetailsModal({
   onDelete,
   event,
 }: EventDetailsModalProps) {
+  const [isSnoozing, setIsSnoozing] = useState(false);
+  const [snoozeMinutes, setSnoozeMinutes] = useState(5);
+
+  const handleSnooze = async () => {
+    try {
+      setIsSnoozing(true);
+      await notificationService.snoozeEvent(event.id, snoozeMinutes);
+      onClose();
+    } catch (error) {
+      console.error("Failed to snooze event:", error);
+      alert("Failed to snooze event. Please try again.");
+    } finally {
+      setIsSnoozing(false);
+    }
+  };
+
   if (!isOpen) return null;
 
   const handleOverlayClick = (e: React.MouseEvent) => {
@@ -92,33 +110,78 @@ export default function EventDetailsModal({
               </div>
             </div>
           )}
-        </div>
 
-        <div className="mt-6 flex justify-end space-x-2">
-          <button
-            onClick={() => onEdit(event)}
-            className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
-          >
-            Edit
-          </button>
-          <button
-            onClick={() => {
-              if (
-                window.confirm("Are you sure you want to delete this event?")
-              ) {
-                onDelete(event.id);
-              }
-            }}
-            className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600"
-          >
-            Delete
-          </button>
-          <button
-            onClick={onClose}
-            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
-          >
-            Close
-          </button>
+          <div className="mt-6 flex flex-col space-y-4">
+            <div className="flex items-center space-x-4">
+              <select
+                value={snoozeMinutes}
+                onChange={(e) => setSnoozeMinutes(Number(e.target.value))}
+                className="
+                  px-3 
+                  py-2 
+                  border-2 
+                  border-gray-600 
+                  rounded-md 
+                  focus:outline-none 
+                  focus:border-blue-500 
+                  focus:ring-2 
+                  focus:ring-blue-500
+                  bg-white
+                  text-gray-900
+                "
+              >
+                <option value={5}>5 minutes</option>
+                <option value={10}>10 minutes</option>
+                <option value={15}>15 minutes</option>
+                <option value={30}>30 minutes</option>
+                <option value={60}>1 hour</option>
+              </select>
+              <button
+                onClick={handleSnooze}
+                disabled={isSnoozing}
+                className="
+                  px-4 
+                  py-2 
+                  bg-blue-500 
+                  text-white 
+                  rounded-md 
+                  hover:bg-blue-600
+                  disabled:opacity-50
+                  disabled:cursor-not-allowed
+                "
+              >
+                {isSnoozing ? "Snoozing..." : "Snooze"}
+              </button>
+            </div>
+            <div className="flex justify-end space-x-2">
+              <button
+                onClick={() => onEdit(event)}
+                className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
+              >
+                Edit
+              </button>
+              <button
+                onClick={() => {
+                  if (
+                    window.confirm(
+                      "Are you sure you want to delete this event?"
+                    )
+                  ) {
+                    onDelete(event.id);
+                  }
+                }}
+                className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600"
+              >
+                Delete
+              </button>
+              <button
+                onClick={onClose}
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
+              >
+                Close
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
