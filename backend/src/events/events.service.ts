@@ -1,4 +1,9 @@
-import { Injectable, Inject, forwardRef } from '@nestjs/common';
+import {
+  Injectable,
+  Inject,
+  forwardRef,
+  NotFoundException,
+} from '@nestjs/common';
 import { Event } from './entities/event.entity';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
@@ -15,11 +20,17 @@ export class EventsService {
   ) {}
 
   create(createEventDto: CreateEventDto): Event {
-    const event: Event = { id: uuid4(), ...createEventDto, isSnoozed: false };
+    const event: Event = {
+      id: uuid4(),
+      ...createEventDto,
+      startDate: new Date(createEventDto.startDate),
+      endDate: new Date(createEventDto.endDate),
+      notificationTime: new Date(createEventDto.notificationTime),
+      isSnoozed: false,
+    };
+
     this.events.push(event);
-
     this.notificationService.scheduleNotification(event);
-
     return event;
   }
 
@@ -33,39 +44,71 @@ export class EventsService {
 
   update(id: string, updateEventDto: UpdateEventDto): Event {
     const eventIndex = this.events.findIndex((event) => event.id === id);
-    if (eventIndex === -1) return null;
+    if (eventIndex === -1) {
+      throw new NotFoundException(`Event with ID "${id}" not found`);
+    }
 
+    // Clear old notification before updating
+    this.notificationService.clearNotification(id);
+
+    const currentEvent = this.events[eventIndex];
     const updatedEvent = {
-      ...this.events[eventIndex],
+      ...currentEvent,
       ...updateEventDto,
+      startDate: updateEventDto.startDate
+        ? new Date(updateEventDto.startDate)
+        : currentEvent.startDate,
+      endDate: updateEventDto.endDate
+        ? new Date(updateEventDto.endDate)
+        : currentEvent.endDate,
+      notificationTime: updateEventDto.notificationTime
+        ? new Date(updateEventDto.notificationTime)
+        : currentEvent.notificationTime,
     };
+
     this.events[eventIndex] = updatedEvent;
 
-    if (updateEventDto.notificationTime || !updatedEvent.isSnoozed) {
-      this.notificationService.scheduleNotification(updatedEvent);
-    }
+    // Schedule new notification
+    this.notificationService.scheduleNotification(updatedEvent);
 
     return updatedEvent;
   }
 
-  replace(id: string, createEventDto: CreateEventDto): Event {
+  remove(id: string): void {
     const eventIndex = this.events.findIndex((event) => event.id === id);
-    if (eventIndex === -1) return null;
-    this.events[eventIndex] = {
-      id,
-      ...createEventDto,
-      isSnoozed: false,
-    };
-    return this.events[eventIndex];
-  }
+    if (eventIndex === -1) return;
 
-  remove(id: string): boolean {
-    const eventIndex = this.events.findIndex((event) => event.id === id);
-    if (eventIndex === -1) return false;
-
+    // Clear notification before removing
     this.notificationService.clearNotification(id);
 
     this.events.splice(eventIndex, 1);
-    return true;
+  }
+
+  replace(id: string, createEventDto: CreateEventDto): Event {
+    const eventIndex = this.events.findIndex((event) => event.id === id);
+    if (eventIndex === -1) {
+      throw new NotFoundException(`Event with ID "${id}" not found`);
+    }
+
+    // Clear old notification before replacing
+    this.notificationService.clearNotification(id);
+
+    // Create the replacement event with the same ID
+    const replacementEvent: Event = {
+      id, // Keep the same ID
+      ...createEventDto,
+      startDate: new Date(createEventDto.startDate),
+      endDate: new Date(createEventDto.endDate),
+      notificationTime: new Date(createEventDto.notificationTime),
+      isSnoozed: false, // Reset snooze state for replaced event
+    };
+
+    // Replace the old event with the new one
+    this.events[eventIndex] = replacementEvent;
+
+    // Schedule new notification
+    this.notificationService.scheduleNotification(replacementEvent);
+
+    return replacementEvent;
   }
 }

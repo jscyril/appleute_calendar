@@ -9,7 +9,7 @@ const toLocalDateTimeString = (date: Date | string): string => {
 
     if (isNaN(dateObject.getTime())) {
       console.error("Invalid date:", date);
-      return "";
+      throw new Error("Invalid date");
     }
 
     const year = dateObject.getFullYear();
@@ -27,8 +27,16 @@ const toLocalDateTimeString = (date: Date | string): string => {
     return `${year}-${month}-${day}T${hours}:${minutes}`;
   } catch (error) {
     console.error("Error formatting date:", error);
-    return "";
+    throw error;
   }
+};
+
+const fromLocalDateTimeString = (dateString: string): Date => {
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) {
+    throw new Error("Invalid date string");
+  }
+  return date;
 };
 
 const getFullUrl = (path: string) => {
@@ -85,16 +93,28 @@ export default function EventModal({
   const [notificationPreset, setNotificationPreset] = useState("5min");
 
   useEffect(() => {
-    if (editMode && eventToEdit) {
-      setEventStartDate(toLocalDateTimeString(eventToEdit.startDate));
-      setEventEndDate(toLocalDateTimeString(eventToEdit.endDate));
-      setNotificationTime(toLocalDateTimeString(eventToEdit.notificationTime));
-    } else {
-      setEventStartDate(toLocalDateTimeString(startDate));
-      setEventEndDate(toLocalDateTimeString(endDate));
-      const notifTime = new Date(endDate);
-      notifTime.setMinutes(notifTime.getMinutes() - 5);
-      setNotificationTime(toLocalDateTimeString(notifTime));
+    try {
+      if (editMode && eventToEdit) {
+        setEventStartDate(toLocalDateTimeString(eventToEdit.startDate));
+        setEventEndDate(toLocalDateTimeString(eventToEdit.endDate));
+        setNotificationTime(
+          toLocalDateTimeString(eventToEdit.notificationTime)
+        );
+      } else {
+        setEventStartDate(toLocalDateTimeString(startDate));
+        setEventEndDate(toLocalDateTimeString(endDate));
+        // Set default notification time to 5 minutes before end
+        const notifTime = new Date(endDate.getTime() - 5 * 60000); // 5 minutes in milliseconds
+        setNotificationTime(toLocalDateTimeString(notifTime));
+      }
+    } catch (error) {
+      console.error("Error setting dates:", error);
+      // Set default values if there's an error
+      const now = new Date();
+      const oneHourLater = new Date(now.getTime() + 60 * 60000);
+      setEventStartDate(toLocalDateTimeString(now));
+      setEventEndDate(toLocalDateTimeString(oneHourLater));
+      setNotificationTime(toLocalDateTimeString(now));
     }
   }, [editMode, eventToEdit, startDate, endDate]);
 
@@ -140,43 +160,82 @@ export default function EventModal({
   };
 
   const handleNotificationPresetChange = (preset: string) => {
-    setNotificationPreset(preset);
-    const end = new Date(eventEndDate);
-    let notifTime = new Date(end);
+    try {
+      setNotificationPreset(preset);
+      const end = fromLocalDateTimeString(eventEndDate);
+      let notifTime = new Date(end);
 
-    switch (preset) {
-      case "atEnd":
-        notifTime = new Date(end);
-        break;
-      case "5min":
-        notifTime.setMinutes(end.getMinutes() - 5);
-        break;
-      case "15min":
-        notifTime.setMinutes(end.getMinutes() - 15);
-        break;
-      case "30min":
-        notifTime.setMinutes(end.getMinutes() - 30);
-        break;
-      case "1hour":
-        notifTime.setHours(end.getHours() - 1);
-        break;
-      case "custom":
-        return;
+      switch (preset) {
+        case "atEnd":
+          notifTime = new Date(end);
+          break;
+        case "5min":
+          // Create new date to avoid modifying the original
+          notifTime = new Date(end.getTime() - 5 * 60000); // 5 minutes in milliseconds
+          break;
+        case "15min":
+          notifTime = new Date(end.getTime() - 15 * 60000); // 15 minutes in milliseconds
+          break;
+        case "30min":
+          notifTime = new Date(end.getTime() - 30 * 60000); // 30 minutes in milliseconds
+          break;
+        case "custom":
+          // Don't change the time for custom option
+          return;
+      }
+
+      // Ensure notification time is not in the past
+      const now = new Date();
+      if (notifTime < now) {
+        // If notification would be in the past, set it to current time
+        notifTime = now;
+        setNotificationPreset("custom");
+      }
+
+      setNotificationTime(toLocalDateTimeString(notifTime));
+    } catch (error) {
+      console.error("Error setting notification time:", error);
+      // Keep the current notification time if there's an error
+      setNotificationPreset("custom");
     }
-    setNotificationTime(toLocalDateTimeString(notifTime));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit({
-      title,
-      description,
-      startDate: new Date(eventStartDate),
-      endDate: new Date(eventEndDate),
-      notificationTime: new Date(notificationTime),
-      images,
-      videos,
-    });
+
+    try {
+      // Convert string dates back to Date objects
+      const startDateObj = fromLocalDateTimeString(eventStartDate);
+      const endDateObj = fromLocalDateTimeString(eventEndDate);
+      const notifTimeObj = fromLocalDateTimeString(notificationTime);
+
+      // Validate dates
+      const now = new Date();
+      if (notifTimeObj < now) {
+        alert(
+          "Notification time cannot be in the past. Please select a future time."
+        );
+        return;
+      }
+
+      if (startDateObj > endDateObj) {
+        alert("End time must be after start time.");
+        return;
+      }
+
+      onSubmit({
+        title,
+        description,
+        startDate: startDateObj,
+        endDate: endDateObj,
+        notificationTime: notifTimeObj,
+        images,
+        videos,
+      });
+    } catch (error) {
+      console.error("Error submitting form:", error);
+      alert("Please enter valid dates for all fields.");
+    }
   };
 
   const handleOverlayClick = (e: React.MouseEvent) => {
@@ -287,21 +346,29 @@ export default function EventModal({
             <input
               type="datetime-local"
               value={eventEndDate}
-              onChange={(e) => setEventEndDate(e.target.value)}
-              className="
-                w-full 
-                px-3 
-                py-2 
-                border-2 
-                border-gray-600 
-                rounded-md 
-                focus:outline-none 
-                focus:border-blue-500 
-                focus:ring-2 
-                focus:ring-blue-500
-                bg-white
-                text-gray-900
-              "
+              onChange={(e) => {
+                const newEndDate = e.target.value;
+                try {
+                  // Validate that end date is after start date
+                  if (eventStartDate) {
+                    const startDateObj =
+                      fromLocalDateTimeString(eventStartDate);
+                    const endDateObj = fromLocalDateTimeString(newEndDate);
+                    if (endDateObj <= startDateObj) {
+                      alert("End time must be after start time");
+                      return;
+                    }
+                  }
+                  setEventEndDate(newEndDate);
+                  // Update notification time based on new end date if using a preset
+                  if (notificationPreset !== "custom") {
+                    handleNotificationPresetChange(notificationPreset);
+                  }
+                } catch (error) {
+                  console.error("Error validating end date:", error);
+                }
+              }}
+              className="w-full px-3 py-2 border-2 border-gray-600 rounded-md focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
               required
             />
           </div>
@@ -412,34 +479,24 @@ export default function EventModal({
                     <img
                       src={getFullUrl(img)}
                       alt={`Upload ${index + 1}`}
-                      className="w-full h-20 object-cover rounded-md hover:opacity-90"
+                      className="w-full h-24 object-cover rounded-md"
                     />
                     <button
                       type="button"
                       onClick={() => handleDeleteImage(index)}
-                      className="
-                        absolute top-1 right-1
-                        bg-red-500 text-white
-                        rounded-full p-1
-                        opacity-0 group-hover:opacity-100
-                        transition-opacity
-                        hover:bg-red-600
-                        focus:outline-none
-                        focus:ring-2
-                        focus:ring-red-500
-                      "
+                      className="absolute top-0 right-0 bg-red-500 text-white rounded-full p-1"
                     >
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
-                        className="h-4 w-4"
                         fill="none"
                         viewBox="0 0 24 24"
+                        strokeWidth={1.5}
                         stroke="currentColor"
+                        className="w-4 h-4"
                       >
                         <path
                           strokeLinecap="round"
                           strokeLinejoin="round"
-                          strokeWidth={2}
                           d="M6 18L18 6M6 6l12 12"
                         />
                       </svg>
@@ -475,40 +532,30 @@ export default function EventModal({
               "
             />
             {videos.length > 0 && (
-              <div className="mt-3 grid grid-cols-2 gap-2">
+              <div className="mt-3 grid grid-cols-3 gap-2">
                 {videos.map((video, index) => (
                   <div key={index} className="relative group">
                     <video
                       src={getFullUrl(video)}
-                      controls
                       className="w-full rounded-md hover:opacity-90"
+                      controls
                     />
                     <button
                       type="button"
                       onClick={() => handleDeleteVideo(index)}
-                      className="
-                        absolute top-1 right-1
-                        bg-red-500 text-white
-                        rounded-full p-1
-                        opacity-0 group-hover:opacity-100
-                        transition-opacity
-                        hover:bg-red-600
-                        focus:outline-none
-                        focus:ring-2
-                        focus:ring-red-500
-                      "
+                      className="absolute top-0 right-0 bg-red-500 text-white rounded-full p-1"
                     >
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
-                        className="h-4 w-4"
                         fill="none"
                         viewBox="0 0 24 24"
+                        strokeWidth={1.5}
                         stroke="currentColor"
+                        className="w-4 h-4"
                       >
                         <path
                           strokeLinecap="round"
                           strokeLinejoin="round"
-                          strokeWidth={2}
                           d="M6 18L18 6M6 6l12 12"
                         />
                       </svg>
@@ -523,34 +570,13 @@ export default function EventModal({
             <button
               type="button"
               onClick={onClose}
-              className="
-                px-4 
-                py-2 
-                border-2 
-                border-gray-600 
-                rounded-md 
-                text-gray-700 
-                hover:bg-gray-50 
-                focus:outline-none 
-                focus:ring-2 
-                focus:ring-gray-500
-              "
+              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="
-                px-4 
-                py-2 
-                bg-blue-500 
-                text-white 
-                rounded-md 
-                hover:bg-blue-600 
-                focus:outline-none 
-                focus:ring-2 
-                focus:ring-blue-500
-              "
+              className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
             >
               {editMode ? "Update Event" : "Create Event"}
             </button>

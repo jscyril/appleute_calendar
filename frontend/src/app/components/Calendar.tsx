@@ -9,6 +9,7 @@ import type { DateClickArg } from "@fullcalendar/interaction";
 import { Event, eventService } from "@/services/eventService";
 import EventModal from "./EventModal";
 import EventDetailsModal from "./EventDetailsModal";
+import SearchBar from "./SearchBar";
 
 const Calendar: FC = () => {
   const [showModal, setShowModal] = useState(false);
@@ -73,7 +74,7 @@ const Calendar: FC = () => {
       description: "",
       startDate: clickedDate,
       endDate: endTime,
-      notificationTime: new Date(clickedDate.getTime() - 15 * 60 * 1000), 
+      notificationTime: new Date(clickedDate.getTime() - 15 * 60 * 1000),
       images: [],
       videos: [],
       isSnoozed: false,
@@ -127,6 +128,11 @@ const Calendar: FC = () => {
     }
   };
 
+  const handleSearchEventClick = (event: Event) => {
+    setSelectedEvent(event);
+    setShowDetailsModal(true);
+  };
+
   const calendarEvents: EventInput[] = events.map((event) => ({
     id: event.id,
     title: event.title,
@@ -142,26 +148,37 @@ const Calendar: FC = () => {
   }));
 
   return (
-    <div className="h-screen p-4">
+    <div className="h-screen p-4 flex flex-col">
       {error && <div className="text-red-500 mb-4">{error}</div>}
-      <FullCalendar
-        plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-        headerToolbar={{
-          left: "prev,next today",
-          center: "title",
-          right: "dayGridMonth,timeGridWeek,timeGridDay",
-        }}
-        initialView="dayGridMonth"
-        editable={true}
-        selectable={true}
-        selectMirror={true}
-        dayMaxEvents={true}
-        events={calendarEvents}
-        select={handleDateSelect}
-        eventClick={handleEventClick}
-        dateClick={handleDateClick}
-        height="100%"
-      />
+
+      {/* Search Bar */}
+      <div className="mb-4">
+        <SearchBar events={events} onEventClick={handleSearchEventClick} />
+      </div>
+
+      {/* Calendar */}
+      <div className="flex-1">
+        <FullCalendar
+          plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+          headerToolbar={{
+            left: "prev,next today",
+            center: "title",
+            right: "dayGridMonth,timeGridWeek,timeGridDay",
+          }}
+          initialView="dayGridMonth"
+          editable={true}
+          selectable={true}
+          selectMirror={true}
+          dayMaxEvents={true}
+          events={calendarEvents}
+          select={handleDateSelect}
+          eventClick={handleEventClick}
+          dateClick={handleDateClick}
+          height="100%"
+        />
+      </div>
+
+      {/* Modals */}
       {showModal && (
         <EventModal
           isOpen={showModal}
