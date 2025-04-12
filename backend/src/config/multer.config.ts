@@ -4,7 +4,7 @@ import { memoryStorage } from 'multer';
 export const multerConfig: MulterOptions = {
   storage: memoryStorage(),
   limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB
+    fileSize: 10 * 1024 * 1024,
   },
   fileFilter: (req, file, cb) => {
     if (

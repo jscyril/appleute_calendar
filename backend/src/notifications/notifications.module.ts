@@ -12,7 +12,6 @@ export class NotificationsModule implements OnModuleInit {
   constructor(private readonly notificationService: NotificationService) {}
 
   async onModuleInit() {
-    // Initialize notifications when the application starts
     await this.notificationService.initializeNotifications();
   }
 }

@@ -41,7 +41,7 @@ export class EventsController {
     @UploadedFiles(
       new ParseFilePipe({
         validators: [
-          new MaxFileSizeValidator({ maxSize: 1024 * 1024 * 10 }), // 10MB
+          new MaxFileSizeValidator({ maxSize: 1024 * 1024 * 10 }), 
           new FileTypeValidator({ fileType: '.(jpg|jpeg|png|gif|mp4|webm)' }),
         ],
       }),
@@ -102,7 +102,6 @@ export class EventsController {
   async remove(@Param('id') id: string) {
     const event = await this.eventsService.findOne(id);
     if (event) {
-      // Delete all associated files
       const files = [...(event.images || []), ...(event.videos || [])];
       await Promise.all(
         files.map((file) => this.fileUploadService.deleteFile(file)),

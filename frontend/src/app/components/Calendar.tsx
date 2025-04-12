@@ -56,19 +56,14 @@ const Calendar: FC = () => {
     const clickedDate = new Date(arg.date);
     const now = new Date();
 
-    // If clicked date is today, use exact current time
     if (clickedDate.toDateString() === now.toDateString()) {
-      // Set hours, minutes, seconds from current time
       clickedDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds());
     } else {
-      // If it's a future date, default to 9 AM
       clickedDate.setHours(9, 0, 0, 0);
     }
 
-    // Set end time to 1 hour after start time
     const endTime = new Date(clickedDate.getTime() + 60 * 60 * 1000);
 
-    // Update the start and end date states
     setStartDate(clickedDate);
     setEndDate(endTime);
 
@@ -78,7 +73,7 @@ const Calendar: FC = () => {
       description: "",
       startDate: clickedDate,
       endDate: endTime,
-      notificationTime: new Date(clickedDate.getTime() - 15 * 60 * 1000), // 15 minutes before
+      notificationTime: new Date(clickedDate.getTime() - 15 * 60 * 1000), 
       images: [],
       videos: [],
       isSnoozed: false,

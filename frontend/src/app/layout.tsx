@@ -22,10 +22,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   useEffect(() => {
-    // Initialize notification service
     notificationService.init().catch(console.error);
 
-    // Cleanup on unmount
     return () => {
       notificationService.disconnect();
     };

@@ -9,7 +9,6 @@ class NotificationService {
   async init() {
     console.log("Initializing notification service...");
 
-    // Request notification permission
     if ("Notification" in window) {
       this.notificationPermission = await Notification.requestPermission();
       console.log("Notification permission:", this.notificationPermission);
@@ -17,7 +16,6 @@ class NotificationService {
       console.warn("Notifications not supported in this browser");
     }
 
-    // Connect to WebSocket
     console.log("Connecting to WebSocket at:", API_CONFIG.baseUrl);
     this.socket = io(API_CONFIG.baseUrl);
 
@@ -32,28 +30,24 @@ class NotificationService {
     this.socket.on("notification", async (data) => {
       console.log("Received notification:", data);
 
-      // Show browser notification if permission granted
       if (this.notificationPermission === "granted") {
         const notification = new Notification(data.title, {
           body: data.description,
-          icon: "/calendar-icon.png", // Make sure to add this icon to your public folder
+          icon: "/calendar-icon.png", 
           tag: data.id,
           requireInteraction: true,
         });
 
         notification.onclick = async () => {
-          // Focus on the calendar tab or open a new one
           window.focus();
           notification.close();
 
-          // Navigate to the event details
           window.dispatchEvent(
             new CustomEvent("openEventDetails", { detail: data })
           );
         };
       }
 
-      // Show custom popup
       window.dispatchEvent(
         new CustomEvent("showNotification", { detail: data })
       );
@@ -75,7 +69,6 @@ class NotificationService {
 
       if (!response.ok) throw new Error("Failed to snooze event");
 
-      // Refresh events in the calendar
       await eventService.getAllEvents();
     } catch (error) {
       console.error("Failed to snooze event:", error);

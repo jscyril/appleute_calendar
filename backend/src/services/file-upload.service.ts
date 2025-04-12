@@ -9,7 +9,6 @@ export class FileUploadService {
   private readonly uploadDir = join(process.cwd(), 'uploads');
 
   constructor() {
-    // Ensure upload directory exists
     this.ensureUploadDir();
   }
 
@@ -31,7 +30,6 @@ export class FileUploadService {
 
     await fs.writeFile(filePath, file.buffer);
 
-    // Return the URL that can be used to access the file
     return `/uploads/${fileName}`;
   }
 
@@ -43,7 +41,6 @@ export class FileUploadService {
     try {
       await fs.unlink(filePath);
     } catch (error) {
-      // Ignore errors if file doesn't exist
       if (error.code !== 'ENOENT') {
         throw error;
       }

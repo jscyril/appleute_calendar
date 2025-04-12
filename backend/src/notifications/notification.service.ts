@@ -17,7 +17,6 @@ export class NotificationService {
   scheduleNotification(event: Event) {
     this.logger.log(`Scheduling notification for event: ${event.id}`);
 
-    // Clear existing notification if any
     this.clearNotification(event.id);
 
     const now = new Date();
@@ -26,7 +25,6 @@ export class NotificationService {
     this.logger.log(`Notification time: ${notificationTime.toISOString()}`);
     this.logger.log(`Current time: ${now.toISOString()}`);
 
-    // If notification time is in the future, schedule it
     if (notificationTime > now) {
       const delay = notificationTime.getTime() - now.getTime();
       this.logger.log(`Scheduling notification in ${delay}ms`);
@@ -61,24 +59,20 @@ export class NotificationService {
       return;
     }
 
-    // Update notification time
     const newNotificationTime = new Date();
     newNotificationTime.setMinutes(
       newNotificationTime.getMinutes() + snoozeMinutes,
     );
 
-    // Calculate new end time
     const newEndDate = new Date(event.endDate);
     newEndDate.setMinutes(newEndDate.getMinutes() + snoozeMinutes);
 
-    // Update event
     const updatedEvent = await this.eventsService.update(eventId, {
       notificationTime: newNotificationTime,
       endDate: newEndDate,
       isSnoozed: true,
     });
 
-    // Reschedule notification
     this.scheduleNotification(updatedEvent);
 
     return updatedEvent;
@@ -87,14 +81,11 @@ export class NotificationService {
   private async sendNotification(event: Event) {
     this.logger.log(`Sending notification for event: ${event.id}`);
 
-    // Remove from queue
     this.notificationQueue.delete(event.id);
 
-    // Send notification through WebSocket
     this.notificationGateway.sendNotification(event);
   }
 
-  // Call this when the application starts
   async initializeNotifications() {
     this.logger.log('Initializing notifications...');
     const events = await this.eventsService.findAll();

@@ -18,7 +18,6 @@ export class EventsService {
     const event: Event = { id: uuid4(), ...createEventDto, isSnoozed: false };
     this.events.push(event);
 
-    // Schedule notification for the new event
     this.notificationService.scheduleNotification(event);
 
     return event;
@@ -42,7 +41,6 @@ export class EventsService {
     };
     this.events[eventIndex] = updatedEvent;
 
-    // Reschedule notification if the event was updated
     if (updateEventDto.notificationTime || !updatedEvent.isSnoozed) {
       this.notificationService.scheduleNotification(updatedEvent);
     }
@@ -65,7 +63,6 @@ export class EventsService {
     const eventIndex = this.events.findIndex((event) => event.id === id);
     if (eventIndex === -1) return false;
 
-    // Clear any scheduled notifications
     this.notificationService.clearNotification(id);
 
     this.events.splice(eventIndex, 1);

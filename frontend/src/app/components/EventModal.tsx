@@ -78,7 +78,6 @@ export default function EventModal({
     editMode && eventToEdit ? eventToEdit.description : ""
   );
 
-  // Initialize dates with useEffect to ensure they update when props change
   const [eventStartDate, setEventStartDate] = useState("");
   const [eventEndDate, setEventEndDate] = useState("");
   const [notificationTime, setNotificationTime] = useState("");
@@ -93,7 +92,6 @@ export default function EventModal({
     } else {
       setEventStartDate(toLocalDateTimeString(startDate));
       setEventEndDate(toLocalDateTimeString(endDate));
-      // Default to 15 minutes before
       const notifTime = new Date(endDate);
       notifTime.setMinutes(notifTime.getMinutes() - 5);
       setNotificationTime(toLocalDateTimeString(notifTime));
@@ -163,7 +161,6 @@ export default function EventModal({
         notifTime.setHours(end.getHours() - 1);
         break;
       case "custom":
-        // Don't change the time for custom option
         return;
     }
     setNotificationTime(toLocalDateTimeString(notifTime));
@@ -359,17 +356,6 @@ export default function EventModal({
                 >
                   30 min before end
                 </button>
-                {/* <button
-                  type="button"
-                  onClick={() => handleNotificationPresetChange("1hour")}
-                  className={`px-3 py-1 rounded-md text-sm ${
-                    notificationPreset === "1hour"
-                      ? "bg-blue-500 text-white"
-                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                  }`}
-                >
-                  1 hour before end
-                </button> */}
                 <button
                   type="button"
                   onClick={() => handleNotificationPresetChange("custom")}
