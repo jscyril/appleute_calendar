@@ -1,9 +1,17 @@
 "use client";
 import { useState } from "react";
+import { eventService } from "@/services/eventService";
+import { API_CONFIG } from "@/config/api";
 
-const toLocalDateTimeString = (date: Date): string => {
-  const offset = date.getTimezoneOffset() * 60000;
-  return new Date(date.getTime() - offset).toISOString().slice(0, 16);
+const toLocalDateTimeString = (date: Date | string): string => {
+  const dateObject = date instanceof Date ? date : new Date(date);
+  const offset = dateObject.getTimezoneOffset() * 60000;
+  return new Date(dateObject.getTime() - offset).toISOString().slice(0, 16);
+};
+
+const getFullUrl = (path: string) => {
+  if (path.startsWith("http")) return path;
+  return `${API_CONFIG.baseUrl}${path}`;
 };
 
 export interface EventModalProps {
@@ -24,9 +32,9 @@ export interface EventModalProps {
   eventToEdit?: {
     title: string;
     description: string;
-    startDate: Date;
-    endDate: Date;
-    notificationTime: Date;
+    startDate: Date | string;
+    endDate: Date | string;
+    notificationTime: Date | string;
     images?: string[];
     videos?: string[];
   };
@@ -69,39 +77,29 @@ export default function EventModal({
     editMode && eventToEdit?.videos ? eventToEdit.videos : []
   );
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files) {
-      const newImages = Array.from(files).map(
-        (file) =>
-          new Promise<string>((resolve) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result as string);
-            reader.readAsDataURL(file);
-          })
-      );
-
-      Promise.all(newImages).then((uploadedImages) => {
-        setImages((prev) => [...prev, ...uploadedImages]);
-      });
+      try {
+        const uploadedUrls = await eventService.uploadFiles(Array.from(files));
+        setImages((prev) => [...prev, ...uploadedUrls]);
+      } catch (error) {
+        console.error("Failed to upload images:", error);
+        alert("Failed to upload images. Please try again.");
+      }
     }
   };
 
-  const handleVideoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files) {
-      const newVideos = Array.from(files).map(
-        (file) =>
-          new Promise<string>((resolve) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result as string);
-            reader.readAsDataURL(file);
-          })
-      );
-
-      Promise.all(newVideos).then((uploadedVideos) => {
-        setVideos((prev) => [...prev, ...uploadedVideos]);
-      });
+      try {
+        const uploadedUrls = await eventService.uploadFiles(Array.from(files));
+        setVideos((prev) => [...prev, ...uploadedUrls]);
+      } catch (error) {
+        console.error("Failed to upload videos:", error);
+        alert("Failed to upload videos. Please try again.");
+      }
     }
   };
 
@@ -300,7 +298,7 @@ export default function EventModal({
                 {images.map((img, index) => (
                   <img
                     key={index}
-                    src={img}
+                    src={getFullUrl(img)}
                     alt={`Upload ${index + 1}`}
                     className="w-full h-20 object-cover rounded-md hover:opacity-90"
                   />
@@ -338,7 +336,7 @@ export default function EventModal({
                 {videos.map((video, index) => (
                   <video
                     key={index}
-                    src={video}
+                    src={getFullUrl(video)}
                     controls
                     className="w-full rounded-md hover:opacity-90"
                   />

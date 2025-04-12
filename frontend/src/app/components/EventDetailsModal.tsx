@@ -1,5 +1,11 @@
 "use client";
 import { Event } from "@/services/eventService";
+import { API_CONFIG } from "@/config/api";
+
+const getFullUrl = (path: string) => {
+  if (path.startsWith("http")) return path;
+  return `${API_CONFIG.baseUrl}${path}`;
+};
 
 interface EventDetailsModalProps {
   isOpen: boolean;
@@ -61,10 +67,10 @@ export default function EventDetailsModal({
                 {event.images.map((img, index) => (
                   <img
                     key={index}
-                    src={img}
+                    src={getFullUrl(img)}
                     alt={`Event image ${index + 1}`}
                     className="w-full rounded-md hover:opacity-90 cursor-pointer"
-                    onClick={() => window.open(img, "_blank")}
+                    onClick={() => window.open(getFullUrl(img), "_blank")}
                   />
                 ))}
               </div>
@@ -78,7 +84,7 @@ export default function EventDetailsModal({
                 {event.videos.map((video, index) => (
                   <video
                     key={index}
-                    src={video}
+                    src={getFullUrl(video)}
                     controls
                     className="w-full rounded-md"
                   />

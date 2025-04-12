@@ -13,6 +13,22 @@ export interface Event {
 }
 
 export const eventService = {
+  async uploadFiles(files: File[]): Promise<string[]> {
+    const formData = new FormData();
+    files.forEach((file) => {
+      formData.append("files", file);
+    });
+
+    const response = await fetch(`${API_CONFIG.baseUrl}/events/upload`, {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!response.ok) throw new Error("Failed to upload files");
+    const data = await response.json();
+    return data.urls;
+  },
+
   async getAllEvents(): Promise<Event[]> {
     const response = await fetch(`${API_CONFIG.baseUrl}/events`);
     if (!response.ok) throw new Error("Failed to fetch events");
