@@ -201,7 +201,7 @@ export default function EventModal({
         </h2>
         <form
           onSubmit={handleSubmit}
-          className="space-y-5 max-h-[70vh] overflow-y-auto pr-2"
+          className="space-y-5 max-h-[70vh] overflow-y-auto pr-2 pl-1"
         >
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
