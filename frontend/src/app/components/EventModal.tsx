@@ -7,13 +7,11 @@ const toLocalDateTimeString = (date: Date | string): string => {
   try {
     const dateObject = date instanceof Date ? date : new Date(date);
 
-    // Check if the date is valid
     if (isNaN(dateObject.getTime())) {
       console.error("Invalid date:", date);
       return "";
     }
 
-    // Format the date to YYYY-MM-DDTHH:mm format for the datetime-local input
     const year = dateObject.getFullYear();
     const month = String(dateObject.getMonth() + 1).padStart(2, "0");
     const day = String(dateObject.getDate()).padStart(2, "0");
@@ -85,7 +83,7 @@ export default function EventModal({
   const [eventEndDate, setEventEndDate] = useState("");
   const [notificationTime, setNotificationTime] = useState("");
 
-  const [notificationPreset, setNotificationPreset] = useState("15min");
+  const [notificationPreset, setNotificationPreset] = useState("5min");
 
   useEffect(() => {
     if (editMode && eventToEdit) {
@@ -96,8 +94,8 @@ export default function EventModal({
       setEventStartDate(toLocalDateTimeString(startDate));
       setEventEndDate(toLocalDateTimeString(endDate));
       // Default to 15 minutes before
-      const notifTime = new Date(startDate);
-      notifTime.setMinutes(notifTime.getMinutes() - 15);
+      const notifTime = new Date(endDate);
+      notifTime.setMinutes(notifTime.getMinutes() - 5);
       setNotificationTime(toLocalDateTimeString(notifTime));
     }
   }, [editMode, eventToEdit, startDate, endDate]);
@@ -361,7 +359,7 @@ export default function EventModal({
                 >
                   30 min before end
                 </button>
-                <button
+                {/* <button
                   type="button"
                   onClick={() => handleNotificationPresetChange("1hour")}
                   className={`px-3 py-1 rounded-md text-sm ${
@@ -371,7 +369,7 @@ export default function EventModal({
                   }`}
                 >
                   1 hour before end
-                </button>
+                </button> */}
                 <button
                   type="button"
                   onClick={() => handleNotificationPresetChange("custom")}
