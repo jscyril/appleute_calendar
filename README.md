@@ -5,8 +5,8 @@ A modern calendar application built with Next.js and NestJS, featuring event man
 ## Features
 
 - Create, edit, and delete events
-- Attach images and videos to events
-- Smart notification system
+- Attach images and videos to events (Upto 10 MB)
+- Push Notification system
 - Event filtering (today, this week, this month, with images, with videos)
 - Search functionality
 
@@ -73,3 +73,16 @@ npm start
 cd frontend
 npm run dev
 ```
+
+## Screenshots
+
+- Home Page
+
+  ![1744528961535](image/README/1744528961535.png)
+- Add Event
+
+![1744528565090](image/README/1744528565090.png)
+
+![1744529100687](image/README/1744529100687.png)
+
+## Video Preview

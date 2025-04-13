@@ -7,7 +7,7 @@ The backend server for Appleute Calendar, built with NestJS and TypeScript.
 - NestJS
 - TypeScript
 - WebSocket (Socket.io) for real-time notifications
-- File upload handling (upto 10 MB)
+- File upload handling
 - In-memory data storage
 
 ## Prerequisites

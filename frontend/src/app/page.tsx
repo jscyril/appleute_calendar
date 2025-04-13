@@ -1,10 +1,16 @@
-import Image from "next/image";
 import Calendar from "./components/Calendar";
+import Head from "next/head";
 
 export default function Home() {
   return (
-    <div className="min-h-screen">
-      <Calendar />
-    </div>
+    <>
+      <Head>
+        <title>Appleute Calendar</title>
+        <meta name="description" content="Appleute Calendar" />
+      </Head>
+      <div className="min-h-screen">
+        <Calendar />
+      </div>
+    </>
   );
 }

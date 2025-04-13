@@ -1,6 +1,6 @@
 # Appleute Calendar Frontend
 
-The frontend application for Appleute Calendar, built with Next.js 14 and TypeScript.
+The frontend application for Appleute Calendar, built with Next.js 15 and TypeScript.
 
 ## Tech Stack
 
