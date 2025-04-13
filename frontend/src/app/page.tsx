@@ -1,16 +1,12 @@
 import Calendar from "./components/Calendar";
-import Head from "next/head";
 
+export const metadata = {
+  title: "Appleute Calendar",
+};
 export default function Home() {
   return (
-    <>
-      <Head>
-        <title>Appleute Calendar</title>
-        <meta name="description" content="Appleute Calendar" />
-      </Head>
-      <div className="min-h-screen">
-        <Calendar />
-      </div>
-    </>
+    <div className="min-h-screen">
+      <Calendar />
+    </div>
   );
 }
