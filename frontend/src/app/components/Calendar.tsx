@@ -11,19 +11,93 @@ import EventModal from "./EventModal";
 import EventDetailsModal from "./EventDetailsModal";
 import SearchBar from "./SearchBar";
 
+type FilterOption =
+  | "all"
+  | "today"
+  | "thisWeek"
+  | "thisMonth"
+  | "withImages"
+  | "withVideos";
+
 const Calendar: FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [events, setEvents] = useState<Event[]>([]);
+  const [filteredEvents, setFilteredEvents] = useState<Event[]>([]);
   const [error, setError] = useState<string>("");
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [filter, setFilter] = useState<FilterOption>("all");
 
   useEffect(() => {
     fetchEvents();
   }, []);
+
+  useEffect(() => {
+    filterEvents();
+  }, [events, filter]);
+
+  const filterEvents = () => {
+    const now = new Date();
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - now.getDay());
+    startOfWeek.setHours(0, 0, 0, 0);
+
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6);
+    endOfWeek.setHours(23, 59, 59, 999);
+
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const endOfMonth = new Date(
+      now.getFullYear(),
+      now.getMonth() + 1,
+      0,
+      23,
+      59,
+      59,
+      999
+    );
+
+    let filtered = [...events];
+
+    switch (filter) {
+      case "today":
+        filtered = events.filter((event) => {
+          const eventDate = new Date(event.startDate);
+          return eventDate.toDateString() === now.toDateString();
+        });
+        break;
+      case "thisWeek":
+        filtered = events.filter((event) => {
+          const eventDate = new Date(event.startDate);
+          return eventDate >= startOfWeek && eventDate <= endOfWeek;
+        });
+        break;
+      case "thisMonth":
+        filtered = events.filter((event) => {
+          const eventDate = new Date(event.startDate);
+          return eventDate >= startOfMonth && eventDate <= endOfMonth;
+        });
+        break;
+      case "withImages":
+        filtered = events.filter(
+          (event) => event.images && event.images.length > 0
+        );
+        break;
+      case "withVideos":
+        filtered = events.filter(
+          (event) => event.videos && event.videos.length > 0
+        );
+        break;
+      default:
+        // "all" - no filtering needed
+        break;
+    }
+
+    setFilteredEvents(filtered);
+  };
 
   const fetchEvents = async () => {
     try {
@@ -133,7 +207,7 @@ const Calendar: FC = () => {
     setShowDetailsModal(true);
   };
 
-  const calendarEvents: EventInput[] = events.map((event) => ({
+  const calendarEvents: EventInput[] = filteredEvents.map((event) => ({
     id: event.id,
     title: event.title,
     start: event.startDate,
@@ -148,16 +222,36 @@ const Calendar: FC = () => {
   }));
 
   return (
-    <div className="h-screen p-4 flex flex-col">
-      {error && <div className="text-red-500 mb-4">{error}</div>}
+    <div className="h-screen flex flex-col bg-white">
+      {error && <div className="text-red-500 px-4 py-2">{error}</div>}
 
-      {/* Search Bar */}
-      <div className="mb-4">
-        <SearchBar events={events} onEventClick={handleSearchEventClick} />
+      {/* Search Bar and Filters */}
+      <div className="px-4 py-2 flex flex-col sm:flex-row gap-2">
+        <div className="flex-1">
+          <SearchBar events={events} onEventClick={handleSearchEventClick} />
+        </div>
+        <div className="flex items-center gap-2">
+          <label htmlFor="filter" className="text-sm font-medium text-gray-700">
+            Filter:
+          </label>
+          <select
+            id="filter"
+            value={filter}
+            onChange={(e) => setFilter(e.target.value as FilterOption)}
+            className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white text-gray-900"
+          >
+            <option value="all">All Events</option>
+            <option value="today">Today</option>
+            <option value="thisWeek">This Week</option>
+            <option value="thisMonth">This Month</option>
+            <option value="withImages">With Images</option>
+            <option value="withVideos">With Videos</option>
+          </select>
+        </div>
       </div>
 
       {/* Calendar */}
-      <div className="flex-1">
+      <div className="flex-1 px-4 pb-4">
         <FullCalendar
           plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
           headerToolbar={{
@@ -175,6 +269,22 @@ const Calendar: FC = () => {
           eventClick={handleEventClick}
           dateClick={handleDateClick}
           height="100%"
+          fixedWeekCount={false}
+          dayHeaderFormat={{ weekday: "short" }}
+          dayCellContent={(args) => {
+            const date = args.date;
+            const day = date.getDate();
+            const isOtherMonth =
+              date.getMonth() !== args.view.currentStart.getMonth();
+
+            if (isOtherMonth) {
+              const month = date.toLocaleString("default", { month: "short" });
+              return {
+                html: `<div class="text-gray-400">${month} ${day}</div>`,
+              };
+            }
+            return { html: `<div>${day}</div>` };
+          }}
         />
       </div>
 

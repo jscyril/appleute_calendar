@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { eventService } from "@/services/eventService";
 import { API_CONFIG } from "@/config/api";
+import { Event } from "@/services/eventService";
 
 const toLocalDateTimeString = (date: Date | string): string => {
   try {
@@ -44,30 +45,17 @@ const getFullUrl = (path: string) => {
   return `${API_CONFIG.baseUrl}${path}`;
 };
 
+const ALLOWED_IMAGE_FORMATS = ["image/jpeg", "image/png", "image/gif"];
+const ALLOWED_VIDEO_FORMATS = ["video/mp4", "video/quicktime"];
+
 export interface EventModalProps {
   isOpen: boolean;
   onClose: () => void;
   startDate: Date;
   endDate: Date;
-  onSubmit: (eventData: {
-    title: string;
-    description: string;
-    startDate: Date;
-    endDate: Date;
-    notificationTime: Date;
-    images?: string[];
-    videos?: string[];
-  }) => void;
+  onSubmit: (eventData: Omit<Event, "id" | "isSnoozed">) => void;
   editMode?: boolean;
-  eventToEdit?: {
-    title: string;
-    description: string;
-    startDate: Date | string;
-    endDate: Date | string;
-    notificationTime: Date | string;
-    images?: string[];
-    videos?: string[];
-  };
+  eventToEdit?: Event;
 }
 
 export default function EventModal({
@@ -91,6 +79,15 @@ export default function EventModal({
   const [notificationTime, setNotificationTime] = useState("");
 
   const [notificationPreset, setNotificationPreset] = useState("5min");
+
+  const [images, setImages] = useState<string[]>(
+    editMode && eventToEdit?.images ? eventToEdit.images : []
+  );
+  const [videos, setVideos] = useState<string[]>(
+    editMode && eventToEdit?.videos ? eventToEdit.videos : []
+  );
+  const [error, setError] = useState<string>("");
+  const [uploadError, setUploadError] = useState<string>("");
 
   useEffect(() => {
     try {
@@ -117,47 +114,6 @@ export default function EventModal({
       setNotificationTime(toLocalDateTimeString(now));
     }
   }, [editMode, eventToEdit, startDate, endDate]);
-
-  const [images, setImages] = useState<string[]>(
-    editMode && eventToEdit?.images ? eventToEdit.images : []
-  );
-  const [videos, setVideos] = useState<string[]>(
-    editMode && eventToEdit?.videos ? eventToEdit.videos : []
-  );
-
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files) {
-      try {
-        const uploadedUrls = await eventService.uploadFiles(Array.from(files));
-        setImages((prev) => [...prev, ...uploadedUrls]);
-      } catch (error) {
-        console.error("Failed to upload images:", error);
-        alert("Failed to upload images. Please try again.");
-      }
-    }
-  };
-
-  const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files) {
-      try {
-        const uploadedUrls = await eventService.uploadFiles(Array.from(files));
-        setVideos((prev) => [...prev, ...uploadedUrls]);
-      } catch (error) {
-        console.error("Failed to upload videos:", error);
-        alert("Failed to upload videos. Please try again.");
-      }
-    }
-  };
-
-  const handleDeleteImage = (indexToDelete: number) => {
-    setImages((prev) => prev.filter((_, index) => index !== indexToDelete));
-  };
-
-  const handleDeleteVideo = (indexToDelete: number) => {
-    setVideos((prev) => prev.filter((_, index) => index !== indexToDelete));
-  };
 
   const handleNotificationPresetChange = (preset: string) => {
     try {
@@ -200,41 +156,114 @@ export default function EventModal({
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const validateFileFormat = (file: File, type: "image" | "video"): boolean => {
+    if (type === "image") {
+      return ALLOWED_IMAGE_FORMATS.includes(file.type);
+    } else {
+      return ALLOWED_VIDEO_FORMATS.includes(file.type);
+    }
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files) {
+      try {
+        // Validate file formats first
+        const invalidFiles = Array.from(files).filter(
+          (file) => !validateFileFormat(file, "image")
+        );
+
+        if (invalidFiles.length > 0) {
+          setUploadError(
+            "Please upload images in JPEG, PNG, or GIF format only."
+          );
+          return;
+        }
+
+        const uploadedUrls = await eventService.uploadFiles(Array.from(files));
+        setImages((prev) => [...prev, ...uploadedUrls]);
+        setUploadError("");
+      } catch (error) {
+        console.error("Failed to upload images:", error);
+        setUploadError("Failed to upload images. Please try again.");
+      }
+    }
+  };
+
+  const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files) {
+      try {
+        // Validate file formats first
+        const invalidFiles = Array.from(files).filter(
+          (file) => !validateFileFormat(file, "video")
+        );
+
+        if (invalidFiles.length > 0) {
+          setUploadError("Please upload videos in MP4 or MOV format only.");
+          return;
+        }
+
+        const uploadedUrls = await eventService.uploadFiles(Array.from(files));
+        setVideos((prev) => [...prev, ...uploadedUrls]);
+        setUploadError("");
+      } catch (error) {
+        console.error("Failed to upload videos:", error);
+        setUploadError("Failed to upload videos. Please try again.");
+      }
+    }
+  };
+
+  const handleDeleteImage = (indexToDelete: number) => {
+    setImages((prev) => prev.filter((_, index) => index !== indexToDelete));
+  };
+
+  const handleDeleteVideo = (indexToDelete: number) => {
+    setVideos((prev) => prev.filter((_, index) => index !== indexToDelete));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
+    setUploadError("");
+
+    if (!title.trim()) {
+      setError("Title is required");
+      return;
+    }
+
+    if (!eventStartDate || !eventEndDate) {
+      setError("Start and end dates are required");
+      return;
+    }
+
+    const start = new Date(eventStartDate);
+    const end = new Date(eventEndDate);
+
+    if (start >= end) {
+      setError("End date must be after start date");
+      return;
+    }
 
     try {
-      // Convert string dates back to Date objects
-      const startDateObj = fromLocalDateTimeString(eventStartDate);
-      const endDateObj = fromLocalDateTimeString(eventEndDate);
-      const notifTimeObj = fromLocalDateTimeString(notificationTime);
-
-      // Validate dates
-      const now = new Date();
-      if (notifTimeObj < now) {
-        alert(
-          "Notification time cannot be in the past. Please select a future time."
-        );
-        return;
-      }
-
-      if (startDateObj > endDateObj) {
-        alert("End time must be after start time.");
-        return;
-      }
-
-      onSubmit({
+      const eventData: Omit<Event, "id" | "isSnoozed"> = {
         title,
         description,
-        startDate: startDateObj,
-        endDate: endDateObj,
-        notificationTime: notifTimeObj,
-        images,
-        videos,
-      });
-    } catch (error) {
-      console.error("Error submitting form:", error);
-      alert("Please enter valid dates for all fields.");
+        startDate: start,
+        endDate: end,
+        notificationTime: new Date(notificationTime),
+        images: images.map((img) => getFullUrl(img)),
+        videos: videos.map((video) => getFullUrl(video)),
+      };
+
+      onSubmit(eventData);
+      onClose();
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("An error occurred while creating the event");
+      }
     }
   };
 
@@ -258,6 +287,8 @@ export default function EventModal({
         <h2 className="text-2xl font-semibold mb-5 text-center">
           {editMode ? "Edit Event" : "Add New Event"}
         </h2>
+        {error && <div className="text-red-500 mb-4">{error}</div>}
+        {uploadError && <div className="text-red-500 mb-4">{uploadError}</div>}
         <form
           onSubmit={handleSubmit}
           className="space-y-5 max-h-[70vh] overflow-y-auto pr-2 pl-1"
@@ -454,7 +485,7 @@ export default function EventModal({
             </label>
             <input
               type="file"
-              accept="image/*"
+              accept="image/jpeg,image/png,image/gif"
               multiple
               onChange={handleImageUpload}
               className="
@@ -472,6 +503,9 @@ export default function EventModal({
                 text-gray-900
               "
             />
+            <p className="text-sm text-gray-500 mt-1">
+              Allowed formats: JPEG, PNG, GIF
+            </p>
             {images.length > 0 && (
               <div className="mt-3 grid grid-cols-3 gap-2">
                 {images.map((img, index) => (
@@ -484,7 +518,7 @@ export default function EventModal({
                     <button
                       type="button"
                       onClick={() => handleDeleteImage(index)}
-                      className="absolute top-0 right-0 bg-red-500 text-white rounded-full p-1"
+                      className="absolute top-0 right-0 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
                     >
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -513,7 +547,7 @@ export default function EventModal({
             </label>
             <input
               type="file"
-              accept="video/*"
+              accept="video/mp4,video/quicktime"
               multiple
               onChange={handleVideoUpload}
               className="
@@ -531,6 +565,9 @@ export default function EventModal({
                 text-gray-900
               "
             />
+            <p className="text-sm text-gray-500 mt-1">
+              Allowed formats: MP4, MOV
+            </p>
             {videos.length > 0 && (
               <div className="mt-3 grid grid-cols-3 gap-2">
                 {videos.map((video, index) => (
@@ -543,7 +580,7 @@ export default function EventModal({
                     <button
                       type="button"
                       onClick={() => handleDeleteVideo(index)}
-                      className="absolute top-0 right-0 bg-red-500 text-white rounded-full p-1"
+                      className="absolute top-0 right-0 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
                     >
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
