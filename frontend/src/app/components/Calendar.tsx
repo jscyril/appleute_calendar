@@ -92,7 +92,6 @@ const Calendar: FC = () => {
         );
         break;
       default:
-        // "all" - no filtering needed
         break;
     }
 
@@ -225,7 +224,6 @@ const Calendar: FC = () => {
     <div className="h-screen flex flex-col bg-white">
       {error && <div className="text-red-500 px-4 py-2">{error}</div>}
 
-      {/* Search Bar and Filters */}
       <div className="px-4 py-2 flex flex-col sm:flex-row gap-2">
         <div className="flex-1">
           <SearchBar events={events} onEventClick={handleSearchEventClick} />
@@ -250,7 +248,6 @@ const Calendar: FC = () => {
         </div>
       </div>
 
-      {/* Calendar */}
       <div className="flex-1 px-4 pb-4">
         <FullCalendar
           plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
@@ -287,8 +284,6 @@ const Calendar: FC = () => {
           }}
         />
       </div>
-
-      {/* Modals */}
       {showModal && (
         <EventModal
           isOpen={showModal}

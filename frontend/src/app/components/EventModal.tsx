@@ -100,13 +100,11 @@ export default function EventModal({
       } else {
         setEventStartDate(toLocalDateTimeString(startDate));
         setEventEndDate(toLocalDateTimeString(endDate));
-        // Set default notification time to 5 minutes before end
-        const notifTime = new Date(endDate.getTime() - 5 * 60000); // 5 minutes in milliseconds
+        const notifTime = new Date(endDate.getTime() - 5 * 60000);
         setNotificationTime(toLocalDateTimeString(notifTime));
       }
     } catch (error) {
       console.error("Error setting dates:", error);
-      // Set default values if there's an error
       const now = new Date();
       const oneHourLater = new Date(now.getTime() + 60 * 60000);
       setEventStartDate(toLocalDateTimeString(now));
@@ -126,24 +124,20 @@ export default function EventModal({
           notifTime = new Date(end);
           break;
         case "5min":
-          // Create new date to avoid modifying the original
-          notifTime = new Date(end.getTime() - 5 * 60000); // 5 minutes in milliseconds
+          notifTime = new Date(end.getTime() - 5 * 60000);
           break;
         case "15min":
-          notifTime = new Date(end.getTime() - 15 * 60000); // 15 minutes in milliseconds
+          notifTime = new Date(end.getTime() - 15 * 60000);
           break;
         case "30min":
-          notifTime = new Date(end.getTime() - 30 * 60000); // 30 minutes in milliseconds
+          notifTime = new Date(end.getTime() - 30 * 60000);
           break;
         case "custom":
-          // Don't change the time for custom option
           return;
       }
 
-      // Ensure notification time is not in the past
       const now = new Date();
       if (notifTime < now) {
-        // If notification would be in the past, set it to current time
         notifTime = now;
         setNotificationPreset("custom");
       }
@@ -151,7 +145,6 @@ export default function EventModal({
       setNotificationTime(toLocalDateTimeString(notifTime));
     } catch (error) {
       console.error("Error setting notification time:", error);
-      // Keep the current notification time if there's an error
       setNotificationPreset("custom");
     }
   };
@@ -168,7 +161,6 @@ export default function EventModal({
     const files = e.target.files;
     if (files) {
       try {
-        // Validate file formats first
         const invalidFiles = Array.from(files).filter(
           (file) => !validateFileFormat(file, "image")
         );
@@ -194,7 +186,6 @@ export default function EventModal({
     const files = e.target.files;
     if (files) {
       try {
-        // Validate file formats first
         const invalidFiles = Array.from(files).filter(
           (file) => !validateFileFormat(file, "video")
         );
@@ -380,7 +371,6 @@ export default function EventModal({
               onChange={(e) => {
                 const newEndDate = e.target.value;
                 try {
-                  // Validate that end date is after start date
                   if (eventStartDate) {
                     const startDateObj =
                       fromLocalDateTimeString(eventStartDate);
@@ -391,7 +381,6 @@ export default function EventModal({
                     }
                   }
                   setEventEndDate(newEndDate);
-                  // Update notification time based on new end date if using a preset
                   if (notificationPreset !== "custom") {
                     handleNotificationPresetChange(notificationPreset);
                   }

@@ -15,7 +15,6 @@ export default function SearchBar({ events, onEventClick }: SearchBarProps) {
   const searchContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Handle clicking outside of search results to close them
     function handleClickOutside(event: MouseEvent) {
       if (
         searchContainerRef.current &&
@@ -82,7 +81,6 @@ export default function SearchBar({ events, onEventClick }: SearchBarProps) {
         </span>
       </div>
 
-      {/* Search Results */}
       {isSearching && searchResults.length > 0 && (
         <div className="absolute z-50 w-full mt-2 bg-white rounded-lg shadow-lg border border-gray-200 max-h-96 overflow-y-auto">
           {searchResults.map((event) => (

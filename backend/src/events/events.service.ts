@@ -48,7 +48,6 @@ export class EventsService {
       throw new NotFoundException(`Event with ID "${id}" not found`);
     }
 
-    // Clear old notification before updating
     this.notificationService.clearNotification(id);
 
     const currentEvent = this.events[eventIndex];
@@ -68,7 +67,6 @@ export class EventsService {
 
     this.events[eventIndex] = updatedEvent;
 
-    // Schedule new notification
     this.notificationService.scheduleNotification(updatedEvent);
 
     return updatedEvent;
@@ -78,7 +76,6 @@ export class EventsService {
     const eventIndex = this.events.findIndex((event) => event.id === id);
     if (eventIndex === -1) return;
 
-    // Clear notification before removing
     this.notificationService.clearNotification(id);
 
     this.events.splice(eventIndex, 1);
@@ -90,23 +87,19 @@ export class EventsService {
       throw new NotFoundException(`Event with ID "${id}" not found`);
     }
 
-    // Clear old notification before replacing
     this.notificationService.clearNotification(id);
 
-    // Create the replacement event with the same ID
     const replacementEvent: Event = {
-      id, // Keep the same ID
+      id,
       ...createEventDto,
       startDate: new Date(createEventDto.startDate),
       endDate: new Date(createEventDto.endDate),
       notificationTime: new Date(createEventDto.notificationTime),
-      isSnoozed: false, // Reset snooze state for replaced event
+      isSnoozed: false,
     };
 
-    // Replace the old event with the new one
     this.events[eventIndex] = replacementEvent;
 
-    // Schedule new notification
     this.notificationService.scheduleNotification(replacementEvent);
 
     return replacementEvent;
