@@ -52,7 +52,7 @@ backend/
 
 - `GET /events` - Get all events
 - `POST /events` - Create new event
-- `PUT /events/:id` - Update event
+- `PATCH /events/:id` - Update event
 - `DELETE /events/:id` - Delete event
 
 ### Files
