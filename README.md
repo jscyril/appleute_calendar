@@ -77,10 +77,12 @@ npm run dev
 ## Screenshots
 
 - Home Page
-
   ![1744528961535](image/README/1744528961535.png)
 - Add Event![1744528565090](image/README/1744528565090.png)![1744529100687](image/README/1744529100687.png)
 
 ## Video Preview
+https://github.com/user-attachments/assets/80b95744-4798-4635-8357-af725e3d3409
 
-![1744530321026](image/README/1744530321026.mp4)
+
+
+
