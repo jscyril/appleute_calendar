@@ -1,6 +1,6 @@
 # Appleute Calendar
 
-A modern calendar application built with Next.js and NestJS, featuring event management with image/video attachments and smart notifications.
+A modern calendar application built with Next.js and NestJS, featuring event management with image/video attachments and push notifications.
 
 ## Features
 
