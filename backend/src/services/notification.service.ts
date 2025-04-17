@@ -1,7 +1,7 @@
 import { Injectable, Inject, forwardRef } from '@nestjs/common';
 import { Event } from '../events/entities/event.entity';
 import { EventsService } from '../events/events.service';
-import { NotificationGateway } from '../gateways/notification.gateway';
+import { NotificationGateway } from '../notifications/notification.gateway';
 
 @Injectable()
 export class NotificationService {
